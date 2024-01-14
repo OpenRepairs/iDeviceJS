@@ -22,15 +22,16 @@
   "homepage": "https://github.com/thebeet/idevicekit#readme",
   "dependencies": {
     "logagent-js": "^1.2.39",
-    "npm": "^6.8.0",
     "plist": "^2.0.1",
-    "sharp": "^0.22.1",
+    "sharp": "^0.33.2",
     "tempfile": "^1.1.1"
   },
   "engines": {
     "node": ">=6.0"
   },
   "devDependencies": {
-    "co": "^4.6.0"
+    "@types/node": "^20.11.0",
+    "co": "^4.6.0",
+    "typescript": "^5.3.3"
   }
 }
