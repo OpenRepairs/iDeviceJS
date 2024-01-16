@@ -30,8 +30,12 @@
     "node": ">=6.0"
   },
   "devDependencies": {
+    "@types/extend": "^3.0.4",
+    "@types/linkify-it": "^3.0.5",
     "@types/node": "^20.11.0",
+    "@types/plist": "^3.0.5",
     "co": "^4.6.0",
+    "jsdoc": "^4.0.2",
     "typescript": "^5.3.3"
   }
 }
