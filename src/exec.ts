@@ -13,7 +13,8 @@ import child_process = require('child_process');
  *   - killSignal: The signal to use to kill the process. Default is 'SIGTERM'.
  *   - cwd: The working directory to use for the command. Default is undefined.
  *   - env: The environment variables to use for the command. Default is undefined.
- * @returns {Promise<[string, string] | [child_process.ExecFileException, string, string]>} A promise that resolves with an array containing the stdout and stderr of the command, or rejects with an array containing the error, stdout, and stderr if the command fails.
+ * @returns {Promise<string[]>} A promise that resolves with an array containing the stdout and stderr of the command, or rejects with an array containing the error, stdout, and stderr if the command fails.
+ *
  */
 let exec = (cmd: string, args: string[], option: object = {
     encoding: 'utf8' as BufferEncoding,
@@ -22,7 +23,7 @@ let exec = (cmd: string, args: string[], option: object = {
     killSignal: 'SIGTERM' as NodeJS.Signals,
     cwd: undefined,
     env: undefined
-}): Promise<[string, string] | [child_process.ExecFileException, string, string]> => {
+}): Promise<[string, string]> => {
     return new Promise((resolve, reject) => {
         child_process.execFile(cmd, args, option, (err: child_process.ExecFileException | null, stdout:string, stderr:string) => {
             if (err) {

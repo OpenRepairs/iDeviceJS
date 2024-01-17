@@ -1,18 +1,15 @@
 
-
-let EventEmitter = require('events');
-let plist = require('plist');
-let extend = require('extend');
-let fs = require('fs');
-const path = require('path');
-
-let exec = require('./exec');
+import { EventEmitter } from 'events';
+import plist = require('plist');
+import extend = require('extend');
+import fs = require('fs');
+import path = require('path');
+import exec from './exec';
 
 let _checkSerial = (serial:string) => {
     return /^[a-z0-9]{40,40}$/.test(serial)
         || /^[A-Z0-9]{8}-[A-Z0-9]{16}$/.test(serial); // fix for iphone xs xr xmax
 };
-
 
 interface ScreenDetails {
     width: number,
@@ -24,29 +21,54 @@ interface ScreenDetails {
     }
 }
 
+interface StorageDetails {
+    size: number,
+    used: number,
+    free: number,
+    free_percent: number
+}
+
+type DeviceSerial = string;
+
 class iDeviceClient extends EventEmitter {
-    constructor() {
+    constructor(){
         super();
     }
 
+
+    /**
+     * Gets a list of all currently connected devices.
+     * @returns {Promise<DeviceSerial[]>} A promise that resolves with an array containing the I/O serials of the connected devices.
+     */
     listDevices() {
-        return exec('idevice_id', ['-l']).then((stdout:string) => {
+        return exec('idevice_id', ['-l']).then(output => {
+            let stdout = output[0];
+            let stderr = output[1];
+
             let devices = stdout.split('\n');
-            let result = [];
+            let result:DeviceSerial[] = [];
             for (let device of devices) {
                 device = device.trim();
                 if (_checkSerial(device)) {
-                    result.push(device);
+                    result.push(device as DeviceSerial);
                 }
             }
             return result;
         });
     }
 
-    // ## raw api ##
-
-    getProperties(serial:string, option: {simple:boolean|undefined, domain: string|undefined} = {simple: undefined, domain: undefined}) {
-        if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
+    /**
+     * Retrieves properties of a device.
+     *
+     * @param {DeviceSerial} serial - The serial number of the device.
+     * @param {object} option - The options for retrieving properties. This object can contain the following properties:
+     *   - simple: If true, retrieves only the simple properties. Default is undefined.
+     *   - domain: Specifies the domain of the properties to retrieve. Default is undefined.
+     * @returns {Promise<plist.PlistObject>} A promise that resolves with the properties of the device, or rejects with an error message if the serial number is invalid.
+     * @throws {Error} If there is an error parsing the properties.
+     */    
+    getProperties(serial:DeviceSerial, option: {simple:boolean|undefined, domain: string|undefined}): Promise<plist.PlistObject> {
+        if (!_checkSerial(serial)) return Promise.reject('Invalid I/O serial number');
         const args = ['-u', serial, '-x']
         if (option) {
             if (('simple' in option) && (option['simple'])) {
@@ -56,36 +78,48 @@ class iDeviceClient extends EventEmitter {
                 args.push('-q', option['domain']);
             }
         }
-        return exec('ideviceinfo', args).then((stdout:string) => {
+        return exec('ideviceinfo', args).then(output => {
             try {
+                let stdout = output[0];
+                let stderr = output[1];
+
                 let result = plist.parse(stdout);
-                return result;
+                return result as plist.PlistObject;
             } catch (e) {
                 throw e;
             }
         });
     }
-
-    getPackages(serial:string, option: {
+    
+    /**
+     * Gets the device name.
+     *
+     * @param {DeviceSerial} serial - The serial number of the device.
+     * @param {object} option - The options for retrieving the device name. This object can contain the following properties:
+     *  - list: Specifies the types of packages to list. Default is 'user', otherwise can be 'system' or 'all'.
+     * @returns {Promise<string>} A promise that resolves with the device name, or rejects with an error message if the serial number is invalid.
+     */
+    getPackages(serial:DeviceSerial, option: {
         list: 'user'|'system'|'all'
-    }) {
+    } = {list: 'user'}) {
         if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
-        let defaultOption = {
-            'list': 'user'
-        };
-        defaultOption = extend(true, defaultOption, option);
+        
+
         const args = ['-u', serial, '-l', '-o', 'xml']
-        if (defaultOption['list'] === 'system') {
+        if (option['list'] === 'system') {
             args.push('-o', 'list_system');
         }
-        if (defaultOption['list'] === 'all') {
+        if (option['list'] === 'all') {
             args.push('-o', 'list_all');
         }
 
-        return exec('ideviceinstaller', args).then((stdout:string) => {
+        return exec('ideviceinstaller', args).then(output => {
             try {
+                let stdout = output[0];
+                let stderr = output[1];
+
                 let result = [];
-                let packages = plist.parse(stdout);
+                let packages = plist.parse(stdout) as plist.PlistObject[];
                 for (let packageObj of packages) {
                     result.push(packageObj['CFBundleIdentifier']);
                 }
@@ -96,22 +130,28 @@ class iDeviceClient extends EventEmitter {
         });
     }
 
-    diagnostics(serial:string, option: {
+    /**
+     * Retrieves various diagnostics of the devices.
+     * @param {DeviceSerial} serial 
+     * @param {object} option 
+     * @returns {Promise<object>}  A promise that resolves with the diagnostics of the device, or rejects with an error message if the serial number is invalid.
+     */
+    diagnostics(serial:DeviceSerial, option: {
         command: string,
         key: string
-    }) {
+    } = {command: 'diagnostics', key: 'All'}) {
         if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
-        let defaultOption = {
-            'command': 'diagnostics',
-            'key': 'All',
-        };
-        defaultOption = extend(true, defaultOption, option);
-        const args = ['-u', serial, defaultOption['command']]
-        if (('key' in defaultOption) && (defaultOption['key'])) {
-            args.push(defaultOption['key']);
+
+        
+        const args = ['-u', serial, option['command']]
+        if (('key' in option) && (option['key'])) {
+            args.push(option['key']);
         }
-        return exec('idevicediagnostics', args).then((stdout:string) => {
+        return exec('idevicediagnostics', args).then(output => {
             try {
+                let stdout = output[0];
+                let stderr = output[1];
+
                 let result = plist.parse(stdout);
                 return result;
             } catch (e) {
@@ -120,67 +160,17 @@ class iDeviceClient extends EventEmitter {
         });
     }
 
-    screencap(serial:string, option: {
-        format: 'png'|'jpg'
-    }) {
-        if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
-        let defaultOption = {
-            format: 'png'
-        }
-        defaultOption = extend(true, defaultOption, option);
-        let sharp = require('sharp');
-        let tempfile = require('tempfile');
-        let tempTiffFile = tempfile('.tiff');
-        return new Promise((resolve, reject) => {
-            exec('idevicescreenshot', ['-u', serial, tempTiffFile]).then((stdout:string) => {
-                let outputStream = sharp(tempTiffFile).toFormat(defaultOption.format).on('error', (err: Error) => {
-                    reject(err);
-                });
-                resolve(outputStream);
-            }, reject);
-        });
-    }
-
-    install(serial:string, ipa:string, option: {
-        resign?: boolean,
-        mobileprovision?: string,
-        identity?: string,
-        keychainPassword?: string
-    }) {
-        if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
-        if (!fs.existsSync(ipa)) return Promise.reject(`ipa file ${ipa} not exists`);
-        let defaultOption = {
-            resign: false,
-            mobileprovision: './develop.mobileprovision',
-            identity: 'iPhone Developer: xxxx (XXXXXXXXXX)',
-            keychainPassword: ''
-        };
-        defaultOption = extend(true, defaultOption, option);
-        let resultPromise;
-        if (defaultOption.resign) {
-            let path = require('path');
-            let shell = path.join(__dirname, 'tools', 'r.sh');
-            resultPromise = exec(['sh', shell, ipa, defaultOption.mobileprovision,
-                                    defaultOption.identity, ipa, defaultOption.keychainPassword], {timeout: 300000});
-        } else {
-            resultPromise = Promise.resolve();
-        }
-        return resultPromise.then(() => {
-            return new Promise((resolve, reject) => {
-                exec('ideviceinstaller', ['-u', serial, '-i', ipa], {timeout: 300000}).then((output:string) => {
-                    if (/\s - Complete\s/.test(output)) {
-                        resolve(output);
-                    } else {
-                        reject(output);
-                    }
-                }, (code: any, stdout:string, stderr:string) => {
-                    reject(code);
-                });
-            })
-        });
-    }
-
-    syslog(serial:string, ipa:string) {
+    /**
+     * This function starts a syslog service for a device with a given serial number.
+     * It uses the 'idevicesyslog' command to start the service, and emits log data as it is received.
+     * If the serial number is invalid, it returns a rejected Promise.
+     * 
+     * @param {DeviceSerial} serial - The serial number of the device.
+     * @returns {Promise<EventEmitter>} - Returns a Promise that resolves to an EventEmitter. The EventEmitter emits 'log' events with the log data, and a 'close' event when the syslog service ends.
+     * @deprecated This function is currently deprecated due to it's buggy nature, and will be removed in a future release.
+     * @throws Will throw an error if the serial number is invalid.
+    */
+    syslog(serial:DeviceSerial) {
         if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
         let patternFile = require('path').join(__dirname, 'patterns.yml');
         let spawn = require('child_process').spawn;
@@ -194,7 +184,7 @@ class iDeviceClient extends EventEmitter {
                 lines = str.split(/(\r?\n)/g);
             for (let line of lines) {
                 lp.parseLine(line, 'log', (err:Error, data: string) => {
-                    if (err) {
+                    if (err.message) {
                     } else {
                         emitter.emit('log', data);
                     }
@@ -210,58 +200,80 @@ class iDeviceClient extends EventEmitter {
         return Promise.resolve(emitter);
     }
 
-    reboot(serial:string) {
+    /**
+     * This function will command the device to reboot
+     * @param {DeviceSerial} serial - The I/O serial number of the device.
+     * @returns {true} Returns true when complete
+     */
+    reboot(serial:DeviceSerial) {
         if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
         return exec('idevicediagnostics', ['restart', '-u', serial]).then(() => {
             return true;
         });
     }
 
-    shutdown(serial:string) {
+    /**
+     * This function will command the device to shutdown
+     * @param {DeviceSerial} serial - The I/O serial number of the device.
+     * @returns {true} Returns true when complete
+     */
+    shutdown(serial:DeviceSerial) {
         if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
         return exec('idevicediagnostics', ['shutdown', '-u', serial]).then(() => {
             return true;
         });
     }
 
-    name(serial:string, newName:string) {
+    /**
+     * This function will command the device to enter recovery mode
+     * @param {DeviceSerial} serial - The I/O serial number of the device.
+     * @returns {true} Returns true when complete
+     */
+    enterRecovery(serial:DeviceSerial) {
+        if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
+        return exec('ideviceenterrecovery', [serial]).then(() => {
+            return true;
+        });
+    }
+
+    exitRecovery(serial:DeviceSerial) {
+        if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
+        return exec('irecovery', ['-n', '-i', "0x" + serial.split("-")[1].toLowerCase()]).then(() => {
+            return true;
+        });
+    }
+
+    /**
+     * This function will retrieve or set the name of the device.
+     * @param {DeviceSerial} serial - The I/O serial number of the device.
+     * @param {string} newName - The new name of the device.
+     * @returns {string} Returns confirmation new name of the device if it was set, otherwise returns original name.
+     */
+    name(serial:DeviceSerial, newName:string) {
         if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
         const args = ['-u', serial];
 
         if(typeof newName !== 'undefined') {
             args.push(newName);
         }
-        return exec('idevicename', args).then((result:string) => {
-            return result.trim();
+        return exec('idevicename', args).then(output => {
+            let stdout = output[0];
+            return stdout.trim();
         });
     }
 
-    // ## shortcut method ##
-
-    getBasicInformation(serial:string) {
-        return this.getProperties(serial)
-            .then((result:{ProductType:string}) => {
-                let type = result['ProductType'];
-                let map = require('./map.json');
-                if (type in map) {
-                    return map[type];
-                }
-                return {};
-            });
-    }
-
-    getResolution(serial:string) {
-        interface ScreenResult {
-            ScreenWidth: string,
-            ScreenHeight: string,
-            ScreenScaleFactor: string
-        }
+    /**
+     * This function will retrieve the screen resolution of the device.
+     * @param {DeviceSerial} serial - The I/O serial number of the device.
+     * @returns {Promise<ScreenDetails>} A promise that resolves with the screen resolution of the device, or rejects with an error message if the serial number is invalid.
+     */
+    getResolution(serial:DeviceSerial) {
         return this.getProperties(serial, {simple: undefined, domain: 'com.apple.mobile.iTunes'})
-            .then((result:ScreenResult) => {
+            .then((result: plist.PlistObject) => {
                 let resolution: ScreenDetails = {
-                    width: parseInt(result['ScreenWidth'], 10),
-                    height: parseInt(result['ScreenHeight'], 10),
-                    scale: parseInt(result['ScreenScaleFactor'], 10),
+                    width: parseInt(result['ScreenWidth'].toString(), 10),
+                    height: parseInt(result['ScreenHeight'].toString(), 10),
+                    scale: parseInt(result['ScreenScaleFactor'].toString(), 10),
                     points: {
                         width: null,
                         height: null
@@ -284,56 +296,70 @@ class iDeviceClient extends EventEmitter {
             });
     }
 
-    getStorage(serial:string) {
+    /**
+     * This function will retrieve the storage information of the device.
+     * @param {DeviceSerial} serial 
+     * @returns {Promise<{StorageDetails}>}
+     */
+    getStorage(serial:DeviceSerial): Promise<StorageDetails> {
         return this.getProperties(serial, {simple: undefined, domain: 'com.apple.disk_usage'})
-            .then((result: {[key: string]:number}) => {
-                let size = result['TotalDataCapacity'];
-                let free = result['TotalDataAvailable'];
+            .then((result: plist.PlistObject) => {
+                let size = result['TotalDataCapacity'] as number;
+                let free = result['TotalDataAvailable'] as number;
                 let used = size - free;
                 return {
                     size: size,
                     used: used,
                     free: free,
-                    free_percent: (free * 100 / (size + 2)).toFixed(10) + '%'
-                }
+                    free_percent: (free * 100 / (size + 2))
+                } as StorageDetails
             });
     }
 
-    getBattery(serial:string) {
+    /**
+     * This function will retrieve the battery information of the device.
+     * @param {DeviceSerial} serial 
+     * @returns {Promise<object>}
+     */
+    getBattery(serial:DeviceSerial) {
         return this.getProperties(serial, {simple: undefined, domain: 'com.apple.mobile.battery'})
-            .then((result: { [key: string]:string}) => {
-                result['level'] = result['BatteryCurrentCapacity'];
-                return result;
+            .then((result: plist.PlistObject) => {
+
+                const batteryInfo = { ...result };
+                batteryInfo['level'] = result['BatteryCurrentCapacity'] as string;
+                return batteryInfo;
             });
     }
 
-    getDeveloperStatus(serial:string) {
-        return this.getProperties(serial, {simple: undefined, domain: 'com.apple.xcode.developerdomain'})
-            .then((result: { [key: string]: string }) => {
-                return result['DeveloperStatus'];
-            });
-    }
-
-    crashreport(serial:string, appName:string) {
+    
+    /**
+     * This function will retrieve the device's logs and save them to a temporary directory.
+     * @date 17/01/2024
+     *
+     * @param {DeviceSerial} serial
+     * @param {string} filter
+     * @returns {Promise<string>} A promise that resolves with the path to the temporary directory containing the logs, or rejects with an error message if the serial number is invalid.
+     */
+    logs(serial:DeviceSerial, filter:string) {
         if (!_checkSerial(serial)) return Promise.reject('invalid serial number');
-        return exec('mktemp', ['-d']).then((tmpDir:string) => {
-            tmpDir = tmpDir.trim();
-            return exec('idevicecrashreport', ['-u', serial, '-e', tmpDir]).then(() => {
-                let crashLogRegex = new RegExp(`^${appName}.*\.ips$`); 
-                let result:{currentFile: string|undefined} = {
-                    currentFile: undefined
-                };
-                fs.readdirSync(tmpDir).forEach((currentFile:string) => {
-                    let crashLogFileName = crashLogRegex.exec(currentFile);
-                    if (crashLogFileName !== null) {
-                        result.currentFile = fs.readFileSync(path.join(tmpDir, currentFile), 'utf8');
-                    }
-                });
-                
-                return result; 
+
+        return exec('mktemp', ['-d']).then((output) => {
+            let stdout = output[0];
+            let stderr = output[1];
+
+            let tmpDir = stdout.trim();
+            let args = ['-u', serial];
+            if (filter) {
+                args.push('-f');
+                args.push(filter);
+            }
+            args.push(tmpDir);
+            return exec('idevicecrashreport', args).then(() => {
+                return tmpDir; 
             });
         });
     }
+    
 }
 
-module.exports = new iDeviceClient();
+export default iDeviceClient;

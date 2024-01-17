@@ -1,8 +1,8 @@
 {
   "name": "idevicekit",
-  "version": "0.3.3",
-  "description": "NodeJs wrapper for libimobiledevice",
-  "main": "index.js",
+  "version": "1.0.0",
+  "description": "NodeJS wrapper for libimobiledevice",
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

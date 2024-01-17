@@ -1,36 +1,47 @@
 let co = require('co');
-let idevicekit = require('./index');
+const idevicekit = require('./dist');
 let fs = require('fs');
 
+const idevice = new idevicekit.default();
+
 co(function* () {
-    let devices = yield idevicekit.listDevices();
-    for (let device of devices) {
-        let properties = yield idevicekit.getProperties(device, {simple: true});
-        let name = yield idevicekit.name(device);
-        let basicInformation = yield idevicekit.getBasicInformation(device);
-        let battery = (yield idevicekit.getBattery(device)).level;
-        let resolution = yield idevicekit.getResolution(device);
-        let status = yield idevicekit.getDeveloperStatus(device);
-        console.log(`${device}: ${name}`);
-        console.log(`    model: ${properties['ProductType']}`);
-        console.log(`    basic: ${JSON.stringify(basicInformation)}`);
-        console.log(`    battery: ${battery}`);
-        console.log(`    resolution: ${resolution['width']}x${resolution['height']}`);
-        console.log(`    status: ${status}`);
-        let screenshotStream = yield idevicekit.screencap(device);
-        screenshotStream.pipe(fs.createWriteStream(device + '.png'));
-        yield idevicekit.crashreport(device, 'CrashDemo').then((crashLogs) => {
-            console.log(JSON.stringify(crashLogs));
-        });
-        idevicekit.syslog(device).then((emitter) => {
-            emitter.on('log', (data) => {
-                console.log(JSON.stringify(data));
-            });
-            setTimeout(() => {
-                emitter.emit('close');
-            }, 10000);
-        });
+    let devices = yield idevice.listDevices();
+    console.log(devices);
+
+    for (let i = 0; i < devices.length; i++) {
+        const deviceSerial = devices[i];
+
+        const properties = yield idevice.getProperties(deviceSerial);
+
+        const packages = yield idevice.getPackages(deviceSerial, {list: 'user'});
+
+        const diagnostics = yield idevice.diagnostics(deviceSerial);
+
+        const resolution = yield idevice.getResolution(deviceSerial);
+
+        //const name = yield idevice.name(deviceSerial, "Sam's iPhone 15 Pro");
+
+        console.log(properties);
+
+        //yield idevice.reboot(deviceSerial);
+        //yield idevice.shutdown(deviceSerial);
+
+        console.log('attempting logs')
+
+        const tmpDir = yield idevice.logs(deviceSerial);
+        console.log(tmpDir);
+        
+        console.log("Enter Recovery Mode")
+        yield idevice.enterRecovery(deviceSerial);
+
+        setTimeout((idevice)=>{
+            console.log("Exit Recovery Mode")
+            idevice.exitRecovery(deviceSerial);
+        }, 1000 * 25, idevice)
+
+
     }
+
 }).catch((err) => {
     console.log(err);
 });
