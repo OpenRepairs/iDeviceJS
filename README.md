@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="380" height="380" src="https://avatars.githubusercontent.com/u/155227173?s=200&v=4">
+  <img width="300" height="300" src="https://avatars.githubusercontent.com/u/155227173?s=200&v=4">
 </p>
 
 # iDeviceJS
@@ -26,7 +26,7 @@ Before you begin, ensure you have the following installed:
 ### Installation
 
 ```bash
-npm install idevicekit
+npm install idevicejs
 ```
 
 ### Use
