@@ -31,13 +31,16 @@ co(function* () {
         const tmpDir = yield idevice.logs(deviceSerial);
         console.log(tmpDir);
         
-        console.log("Enter Recovery Mode")
-        yield idevice.enterRecovery(deviceSerial);
+        //console.log("Enter Recovery Mode")
+        //yield idevice.enterRecovery(deviceSerial);
 
-        setTimeout((idevice)=>{
-            console.log("Exit Recovery Mode")
-            idevice.exitRecovery(deviceSerial);
-        }, 1000 * 25, idevice)
+        const storage = yield idevice.getStorage(deviceSerial);
+
+        const battery = yield idevice.getBattery(deviceSerial);
+
+        console.log(storage);
+
+        console.log(battery);
 
 
     }
