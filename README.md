@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="460" height="460" src="https://avatars.githubusercontent.com/u/155227173?s=200&v=4">
+  <img width="380" height="380" src="https://avatars.githubusercontent.com/u/155227173?s=200&v=4">
 </p>
 
 # iDeviceJS
