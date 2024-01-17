@@ -1,8 +1,8 @@
 let co = require('co');
-const idevicekit = require('./dist');
+const idevicejs = require('./dist');
 let fs = require('fs');
 
-const idevice = new idevicekit.default();
+const idevice = new idevicejs.default();
 
 co(function* () {
     let devices = yield idevice.listDevices();

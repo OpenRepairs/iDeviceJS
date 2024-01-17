@@ -1,5 +1,5 @@
 {
-  "name": "idevicekit",
+  "name": "idevicejs",
   "version": "1.0.0",
   "description": "NodeJS wrapper for libimobiledevice",
   "main": "dist/index.js",
@@ -8,18 +8,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/thebeet/idevicekit.git"
+    "url": "git+https://github.com/openrepairs/idevicejs.git"
   },
   "keywords": [
     "idevice",
     "iOS"
   ],
-  "author": "TheBeet",
+  "author": "Sam Neale",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/thebeet/idevicekit/issues"
+    "url": "https://github.com/openrepairs/idevicejs/issues"
   },
-  "homepage": "https://github.com/thebeet/idevicekit#readme",
+  "homepage": "https://github.com/openrepairs/idevicejs#readme",
   "dependencies": {
     "logagent-js": "^1.2.39",
     "plist": "^3.0.5",

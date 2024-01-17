@@ -9,3 +9,6 @@
 ## Reporting a Vulnerability
 
 To report a vulnerability please email me@samneale.dev.
+
+[!CAUTION]
+**Do not report vulnerabilities by Github Issues**

@@ -1,11 +1,9 @@
-## iDeviceKit
-By [@thebeet](https://github.com/thebeet)https://github.com/thebeet
+## iDeviceJS
 
 This package is a revamp of the original iDeviceKit by thebeet and is available here: https://github.com/thebeet/idevicekit
 
 **LICENCE**
 Copyright (c) 2017 year, XIANG GuangTe <thebeet@gmail.com>
- 
 
 Permission to use, copy, modify, and/or distribute this software for
 any purpose with or without fee is hereby granted, provided that the
