@@ -3,7 +3,7 @@
 </p>
 
 # iDeviceJS
-
+[![npm](https://img.shields.io/npm/v/idevicejs.svg)](https://www.npmjs.com/package/idevicejs)
 iDeviceJS is a Node.js wrapper for [libimobiledevice](https://github.com/libimobiledevice/libimobiledevice), enabling seamless interaction with iOS devices via a convenient and powerful Node.js interface.
 
 ## Features
